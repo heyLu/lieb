@@ -1,3 +1,4 @@
+import Numeric
 import Control.Monad (liftM)
 import System.Environment (getArgs)
 
@@ -45,13 +46,29 @@ parseAtom = do
         "#f" -> Bool False
         _    -> Atom atom
 
+parseWithRead :: ReadS a -> String -> Parser a
+parseWithRead r s = case r s of
+    [(x, _)] -> return x
+    _ -> fail "oops"
+
+readBin :: (Integral a) => ReadS a
+readBin = readInt 2 (`elem` "01") (\c -> case c of '0' -> 0; '1' -> 1)
+
 parseNumber :: Parser LispVal
-parseNumber = liftM (Number . read) $ many1 digit
+parseNumber = do
+    char '#'
+    radix <- oneOf "bodx"
+    num <- case radix of
+        'b' -> many1 (oneOf "01") >>= parseWithRead readBin
+        'o' -> many1 (oneOf "01234567") >>= parseWithRead readOct
+        'd' -> many1 digit >>= parseWithRead readDec
+        'x' -> many1 (digit <|> oneOf "abcdef") >>= parseWithRead readHex
+    return $ Number num
 
 parseExpr :: Parser LispVal
-parseExpr = parseAtom
+parseExpr = parseNumber
+    <|> parseAtom
     <|> parseString
-    <|> parseNumber
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lieb" input of
