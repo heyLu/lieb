@@ -8,6 +8,7 @@ data LispVal = Atom String
     | List [LispVal]
     | DottedList [LispVal] LispVal
     | Number Integer
+    | Float Float
     | String String
     | Char Char
     | Bool Bool
@@ -83,8 +84,14 @@ parseNumber :: Parser LispVal
 parseNumber = parsePrefixedNumber
     <|> (many1 digit >>= liftM Number . parseWithRead readDec)
 
+parseFloat :: Parser LispVal
+parseFloat = do
+    num <- liftM concat $ sequence [many1 digit, string ".", many1 digit]
+    liftM Float $ parseWithRead readFloat num
+
 parseExpr :: Parser LispVal
 parseExpr = try parseChar
+    <|> try parseFloat
     <|> parseNumber
     <|> parseAtom
     <|> parseString
