@@ -17,10 +17,21 @@ symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 spaces :: Parser ()
 spaces = skipMany1 space
 
+escaped :: Parser Char
+escaped = do
+    char '\\'
+    c <- oneOf "nrt\\\""
+    return $ case c of
+        'n' -> '\n'
+        'r' -> '\r'
+        't' -> '\t'
+        '\\' -> '\\'
+        '\"' -> '\"'
+
 parseString :: Parser LispVal
 parseString = do
     char '"'
-    str <- many (noneOf "\"")
+    str <- many (escaped <|> noneOf "\"")
     char '"'
     return $ String str
 
