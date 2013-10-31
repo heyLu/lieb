@@ -54,8 +54,8 @@ parseWithRead r s = case r s of
 readBin :: (Integral a) => ReadS a
 readBin = readInt 2 (`elem` "01") (\c -> case c of '0' -> 0; '1' -> 1)
 
-parseNumber :: Parser LispVal
-parseNumber = do
+parsePrefixedNumber :: Parser LispVal
+parsePrefixedNumber = do
     char '#'
     radix <- oneOf "bodx"
     num <- case radix of
@@ -64,6 +64,10 @@ parseNumber = do
         'd' -> many1 digit >>= parseWithRead readDec
         'x' -> many1 (digit <|> oneOf "abcdef") >>= parseWithRead readHex
     return $ Number num
+
+parseNumber :: Parser LispVal
+parseNumber = parsePrefixedNumber
+    <|> (many1 digit >>= liftM Number . parseWithRead readDec)
 
 parseExpr :: Parser LispVal
 parseExpr = parseNumber
