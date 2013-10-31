@@ -89,12 +89,38 @@ parseFloat = do
     num <- liftM concat $ sequence [many1 digit, string ".", many1 digit]
     liftM Float $ parseWithRead readFloat num
 
+parseList :: Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = do
+    head <- endBy parseExpr spaces
+    tail <- char '.' >> spaces >> parseExpr
+    return $ DottedList head tail
+
+parseQuoted :: Parser LispVal
+parseQuoted = do
+    char '\''
+    x <- parseExpr
+    return $ List [Atom "quote", x]
+
+parseUnquoted :: Parser LispVal
+parseUnquoted = do
+    char '`'
+    x <- parseExpr
+    return $ List [Atom "unquote", x]
+
 parseExpr :: Parser LispVal
 parseExpr = try parseChar
     <|> try parseFloat
     <|> parseNumber
+    <|> parseQuoted
     <|> parseAtom
     <|> parseString
+    <|> do char '('
+           x <- try parseList <|> parseDottedList
+           char ')'
+           return x
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lieb" input of
