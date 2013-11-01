@@ -1,3 +1,4 @@
+import Prelude hiding (showList)
 import Numeric
 import Control.Monad (liftM)
 import System.Environment (getArgs)
@@ -12,7 +13,19 @@ data LispVal = Atom String
     | String String
     | Char Char
     | Bool Bool
-    deriving (Show)
+
+instance Show LispVal where
+    show (Bool True) = "#t"
+    show (Bool False) = "#f"
+    show (Number n) = show n
+    show (Float f) = show f
+    show (String s) = show s
+    show (Atom a) = a
+    show (Char c) = "#\\" ++ show c
+    show (List l) = "(" ++ showList l ++ ")"
+    show (DottedList head tail) = "(" ++ showList head ++ "." ++ show tail ++ ")"
+
+showList = unwords . map show
 
 symbol :: Parser Char
 symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
