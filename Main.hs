@@ -1,5 +1,6 @@
 import Prelude hiding (showList)
 import Numeric
+import Data.Ratio
 import Control.Monad (liftM)
 import System.Environment (getArgs)
 
@@ -156,7 +157,7 @@ primitives :: [(String, [LispVal] -> LispVal)]
 primitives = [("+", numericFn (+) 0),
     ("-", numericFn' (-) negate),
     ("*", numericFn (*) 1),
-    ("/", numericBinOp div),
+    ("/", division),
     ("mod", numericBinOp mod),
     ("quotient", numericBinOp quot),
     ("remainder", numericBinOp rem)]
@@ -175,6 +176,21 @@ numericBinOp fn args = Number $ foldl1 fn $ map unpackNumber args
 unpackNumber :: LispVal -> Integer
 unpackNumber (Number n) = n
 unpackNumber val = error $ "Expected a number, got a " ++ show val
+
+division :: [LispVal] -> LispVal
+division [(Number n)] = Float $ 1 / (fromInteger n)
+division [(Float f)] = Float $ 1 / f
+division args = foldl1 divide args
+
+divide :: LispVal -> LispVal -> LispVal
+divide x y = if denominator q == 1
+             then Number . numerator $ q
+             else Float $ fromRational q
+    where (x', y') = (unpack x, unpack y)
+          q = toRational $ x' / y'
+          unpack (Number n) = fromInteger n
+          unpack (Float f) = f
+          unpack val = error $ "Expected a numeric value, got a " ++ show val
 
 main :: IO ()
 main = do
