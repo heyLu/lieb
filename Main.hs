@@ -114,7 +114,7 @@ parseUnquoted = do
 parseExpr :: Parser LispVal
 parseExpr = try parseChar
     <|> parseNumber
-    <|> parseQuoted
+    <|> parseQuoted <|> parseUnquoted
     <|> parseAtom
     <|> parseString
     <|> do char '('
