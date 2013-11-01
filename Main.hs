@@ -135,12 +135,48 @@ parseExpr = try parseChar
            char ')'
            return x
 
-readExpr :: String -> String
+readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lieb" input of
-    Left err -> "No match: " ++ show err
-    Right val -> "Found value: " ++ show val
+    Left err -> String $ "No match: " ++ show err
+    Right val -> val
+
+eval :: LispVal -> LispVal
+eval val@(Char _) = val
+eval val@(Bool _) = val
+eval val@(String _) = val
+eval val@(Float _) = val
+eval val@(Number _) = val
+eval (List [Atom "quote", val]) = val
+eval (List (Atom fn : args)) = apply fn $ map eval args
+
+apply :: String -> [LispVal] -> LispVal
+apply fn args = maybe (Bool False) ($ args) $ lookup fn primitives
+
+primitives :: [(String, [LispVal] -> LispVal)]
+primitives = [("+", numericFn (+) 0),
+    ("-", numericFn' (-) negate),
+    ("*", numericFn (*) 1),
+    ("/", numericBinOp div),
+    ("mod", numericBinOp mod),
+    ("quotient", numericBinOp quot),
+    ("remainder", numericBinOp rem)]
+
+numericFn :: (Integer -> Integer -> Integer) -> Integer -> [LispVal] -> LispVal
+numericFn fn defaultVal [] = Number defaultVal
+numericFn fn _ args = numericBinOp fn args
+
+numericFn' :: (Integer -> Integer -> Integer) -> (Integer -> Integer) -> [LispVal] -> LispVal
+numericFn' _ oneArgFn [val] = Number . oneArgFn $ unpackNumber val
+numericFn' fn _ args = numericBinOp fn args
+
+numericBinOp :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
+numericBinOp fn args = Number $ foldl1 fn $ map unpackNumber args
+
+unpackNumber :: LispVal -> Integer
+unpackNumber (Number n) = n
+unpackNumber val = error $ "Expected a number, got a " ++ show val
 
 main :: IO ()
 main = do
     args <- getArgs
-    putStrLn (readExpr (args !! 0))
+    putStrLn . show $ (readExpr (args !! 0))
