@@ -80,14 +80,15 @@ parsePrefixedNumber = do
         'x' -> many1 (digit <|> oneOf "abcdef") >>= parseWithRead readHex
     return $ Number num
 
-parseNumber :: Parser LispVal
-parseNumber = parsePrefixedNumber
-    <|> (many1 digit >>= liftM Number . parseWithRead readDec)
-
 parseFloat :: Parser LispVal
 parseFloat = do
     num <- liftM concat $ sequence [many1 digit, string ".", many1 digit]
     liftM Float $ parseWithRead readFloat num
+
+parseNumber :: Parser LispVal
+parseNumber = try parseFloat
+    <|> (many1 digit >>= liftM Number . parseWithRead readDec)
+    <|> parsePrefixedNumber
 
 parseList :: Parser LispVal
 parseList = liftM List $ sepBy parseExpr spaces
@@ -112,7 +113,6 @@ parseUnquoted = do
 
 parseExpr :: Parser LispVal
 parseExpr = try parseChar
-    <|> try parseFloat
     <|> parseNumber
     <|> parseQuoted
     <|> parseAtom
