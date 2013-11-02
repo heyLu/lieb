@@ -234,6 +234,7 @@ primitives = [("+", numericFn (+) 0),
     (">=", boolBinOp (>=)),
     ("and", binOp unpackBool Bool (&&)),
     ("or", binOp unpackBool Bool (||)),
+    ("cond", cond),
     ("car", car),
     ("cdr", cdr),
     ("cons", cons)]
@@ -303,6 +304,21 @@ cons [x, List xs] = return . List $ x:xs
 cons [x, DottedList xs t] = return $ DottedList (x:xs) t
 cons [x, y] = return $ DottedList [x] y
 cons badArgList = throwError $ NumArgs 2 badArgList
+
+cond :: [LispVal] -> ThrowsError LispVal
+cond (c:cs) = makeConditional (c:cs) >>= eval
+cond badArgList = throwError $ NumArgs 1 badArgList
+
+makeConditional :: [LispVal] -> ThrowsError LispVal
+makeConditional ((List (test:[expression])):[]) =
+    return $ List [Atom "if", test, expression, List [Atom "quote", List []]]
+makeConditional ((List (test:[expression])):[(List (Atom "else":[altExpression]))]) =
+    return $ List [Atom "if", test, expression, altExpression]
+makeConditional ((List (test:[expression])):clauses) = do
+    altConditions <- makeConditional clauses
+    return $ List [Atom "if", test, expression, altConditions]
+makeConditional vals = do
+    throwError $ BadSpecialForm "if" $ List (Atom "cond" : vals)
 
 main :: IO ()
 main = do
