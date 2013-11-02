@@ -1,4 +1,5 @@
 (define (not x) (if x #f #t))
+; should be nil?
 (define (null? obj) (if (= obj '()) #t #f))
 
 (define (list . objs) objs)

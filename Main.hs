@@ -261,13 +261,16 @@ parseExpr = try parseChar
            char ')'
            return x
 
+comment :: Parser ()
+comment = char ';' >> skipMany (noneOf "\n")
+
 readOrThrow :: Parser a -> String -> ThrowsError a
 readOrThrow parser input = case parse parser "lieb" input of
     Left err -> throwError $ Parser err
     Right val -> return val
 
 readExpr = readOrThrow parseExpr
-readExprList = readOrThrow (endBy parseExpr spaces)
+readExprList = readOrThrow (endBy parseExpr (optional . many1 $ comment <|> spaces))
 
 makeFunc varargs env params body = return $ Func (map show params) varargs body env
 makeNormalFunc = makeFunc Nothing
