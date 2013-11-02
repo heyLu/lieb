@@ -30,6 +30,32 @@ instance Show LispVal where
 
 showList = unwords . map show
 
+instance Eq LispVal where
+    (Atom x) == (Atom y) = x == y
+    (Number x) == (Number y) = x == y
+    (Float x) == (Float y) = x == y
+    (String x) == (String y) = x == y
+    (Char x) == (Char y) = x == y
+    (Bool x) == (Bool y) = x == y
+    (List xs) == (List ys) = xs `eqList` ys
+    (DottedList xs xt) == (DottedList ys yt) =
+        xs `eqList` ys && xt == yt
+    _ == _ = False
+
+eqList :: (Eq a) => [a] -> [a] -> Bool
+eqList xs ys = length xs == length ys
+    && all (\(x, y) -> x == y) (zip xs ys)
+
+instance Ord LispVal where
+    (Atom x) `compare` (Atom y) = x `compare` y
+    (Number x) `compare` (Number y) = x `compare` y
+    (Float x) `compare` (Float y) = x `compare` y
+    (String x) `compare` (String y) = x `compare` y
+    (Char x) `compare` (Char y) = x `compare` y
+    (Bool x) `compare` (Bool y) = x `compare` y
+    _ `compare` _ = error "Can't compare"
+
+
 data LispError = NumArgs Integer [LispVal]
     | TypeMismatch String LispVal
     | Parser ParseError
@@ -194,7 +220,15 @@ primitives = [("+", numericFn (+) 0),
     ("/", division),
     ("mod", numericBinOp mod),
     ("quotient", numericBinOp quot),
-    ("remainder", numericBinOp rem)]
+    ("remainder", numericBinOp rem),
+    ("=", boolBinOp (==)),
+    ("/=", boolBinOp (/=)),
+    ("<", boolBinOp (<)),
+    (">", boolBinOp (>)),
+    ("<=", boolBinOp (<=)),
+    (">=", boolBinOp (>=)),
+    ("and", binOp unpackBool Bool (&&)),
+    ("or", binOp unpackBool Bool (||))]
 
 numericFn :: (Integer -> Integer -> Integer) -> Integer -> [LispVal] -> ThrowsError LispVal
 numericFn fn defaultVal [] = return $ Number defaultVal
@@ -229,6 +263,20 @@ divide x y = do
   where unpack (Number n) = return $ fromInteger n
         unpack (Float f) = return f
         unpack val = throwError $ TypeMismatch "number" val
+
+boolBinOp :: (LispVal -> LispVal -> Bool) -> [LispVal] -> ThrowsError LispVal
+boolBinOp fn [x, y] = return . Bool $ x `fn` y
+
+binOp :: (LispVal -> ThrowsError a) -> (b -> LispVal) -> (a -> a -> b) -> [LispVal] -> ThrowsError LispVal
+binOp unpack pack fn [x, y] = do
+    x' <- unpack x
+    y' <- unpack y
+    return . pack $ x' `fn` y'
+binOp _ _ _ args = throwError $ NumArgs 2 args
+
+unpackBool :: LispVal -> ThrowsError Bool
+unpackBool (Bool b) = return b
+unpackBool notBool = throwError $ TypeMismatch "bool" notBool
 
 main :: IO ()
 main = do
