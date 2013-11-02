@@ -2,6 +2,7 @@
 import Prelude hiding (showList)
 import Numeric
 import Data.Ratio
+import Data.List (find)
 import Control.Monad (liftM)
 import System.Environment (getArgs)
 import "mtl" Control.Monad.Error
@@ -235,6 +236,7 @@ primitives = [("+", numericFn (+) 0),
     ("and", binOp unpackBool Bool (&&)),
     ("or", binOp unpackBool Bool (||)),
     ("cond", cond),
+    ("case", caseForm),
     ("car", car),
     ("cdr", cdr),
     ("cons", cons),
@@ -320,6 +322,19 @@ makeConditional ((List (test:[expression])):clauses) = do
     return $ List [Atom "if", test, expression, altConditions]
 makeConditional vals = do
     throwError $ BadSpecialForm "if" $ List (Atom "cond" : vals)
+
+caseForm :: [LispVal] -> ThrowsError LispVal
+caseForm (key:[]) = return $ List [Atom "quote", List []]
+caseForm (key:(List (Atom "else":[alt])):_) = eval alt
+caseForm (key:(List [cases, val]):cs) = do
+    matches <- matchesClause key cases
+    if matches
+    then eval val
+    else caseForm $ key:cs
+
+matchesClause :: LispVal -> LispVal -> ThrowsError Bool
+matchesClause val (List alts) = return . maybe False (const True) $ find (== val) alts
+matchesClause _   badArg = throwError $ TypeMismatch "list" badArg
 
 main :: IO ()
 main = do
