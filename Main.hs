@@ -237,7 +237,8 @@ primitives = [("+", numericFn (+) 0),
     ("cond", cond),
     ("car", car),
     ("cdr", cdr),
-    ("cons", cons)]
+    ("cons", cons),
+    ("eval", mapM eval >>= return . liftM head)]
 
 numericFn :: (Integer -> Integer -> Integer) -> Integer -> [LispVal] -> ThrowsError LispVal
 numericFn fn defaultVal [] = return $ Number defaultVal
