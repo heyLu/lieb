@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rlwrap --history-filename .lieb-history --histsize 10000 ./lieb
